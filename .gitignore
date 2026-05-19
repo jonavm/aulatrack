@@ -1,0 +1,14 @@
+.venv/
+.codex/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+build/
+dist/
+*.spec
+*.rar
+*.zip
+data/*.db
+data/logs/
+!data/.gitkeep
