@@ -1,10 +1,10 @@
 # AulaTrack
 
-Offline desktop app for teachers to manage groups, attendance, grades, local backups, and exports without depending on internet access.
+Offline desktop app for teachers to manage groups, attendance, grades, backups, and exports.
 
 ## Status
 
-Portfolio edition based on a private beta prepared for real user validation.
+Portfolio edition based on a private beta used for real user validation.
 
 ## Preview
 
@@ -16,9 +16,6 @@ Portfolio edition based on a private beta prepared for real user validation.
 
 ### Gradebook
 ![Gradebook](docs/screenshots/gradebook.png)
-
-### Student Profile
-![Student Profile](docs/screenshots/student-profile.png)
 
 ## Features
 
@@ -33,7 +30,7 @@ Portfolio edition based on a private beta prepared for real user validation.
 
 ## Why I Built It
 
-I built AulaTrack as an offline-first desktop tool for a real teacher workflow, with emphasis on speed, clarity, and local reliability. The project was designed to be usable without internet access and practical enough to validate with a real first user.
+I built AulaTrack as an offline-first desktop tool for a real teacher workflow, with emphasis on speed, clarity, and local reliability. The project was designed to be practical enough for real user validation while remaining simple to run and maintain locally.
 
 ## Tech Stack
 
