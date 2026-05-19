@@ -2,6 +2,10 @@
 
 Aplicacion de escritorio local para gestion de calificaciones escolares, pensada para uso offline por docentes.
 
+## Estado del proyecto
+
+Version de portafolio basada en una beta privada para validacion con una usuaria real.
+
 ## Stack
 
 - Python
@@ -107,3 +111,9 @@ py main.py
 
 - La base SQLite se guarda en [data/aulatrack.db](C:/Users/jona/Desktop/aulatrack/data/aulatrack.db)
 - Si quieres reiniciar una prueba desde cero, cierra la app y elimina ese archivo
+
+## License
+
+This repository is shared for portfolio and demonstration purposes only.
+
+All rights reserved. See [LICENSE](C:/Users/jona/Desktop/aulatrack/LICENSE).
