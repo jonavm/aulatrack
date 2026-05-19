@@ -1,119 +1,109 @@
 # AulaTrack
 
-Aplicacion de escritorio local para gestion de calificaciones escolares, pensada para uso offline por docentes.
+Offline desktop app for teachers to manage groups, attendance, grades, local backups, and exports without depending on internet access.
 
-## Estado del proyecto
+## Status
 
-Version de portafolio basada en una beta privada para validacion con una usuaria real.
+Portfolio edition based on a private beta prepared for real user validation.
 
-## Stack
+## Preview
+
+### Dashboard
+![Dashboard](docs/screenshots/dashboard.png)
+
+### Attendance Tracking
+![Attendance](docs/screenshots/attendance.png)
+
+### Gradebook
+![Gradebook](docs/screenshots/gradebook.png)
+
+### Student Profile
+![Student Profile](docs/screenshots/student-profile.png)
+
+## Features
+
+- Group and student management
+- Daily attendance tracking by date
+- Gradebook with per-student capture
+- Student profile view with academic summary
+- Local SQLite persistence
+- Backup and restore tools
+- Export to PDF, XLSX, and CSV
+- Windows desktop build
+
+## Why I Built It
+
+I built AulaTrack as an offline-first desktop tool for a real teacher workflow, with emphasis on speed, clarity, and local reliability. The project was designed to be usable without internet access and practical enough to validate with a real first user.
+
+## Tech Stack
 
 - Python
 - PySide6
 - SQLite
+- OpenPyXL
+- PyInstaller
 
-## Principios del proyecto
+## Architecture
 
-- 100% offline
-- Simplicidad operativa
-- Captura rapida con teclado
-- UI moderna, ligera y consistente
-- Arquitectura pequena pero escalable
+The app is organized into focused modules:
 
-## Estructura base
+- `ui/` for views and reusable widgets
+- `services/` for business logic and orchestration
+- `database/` for SQLite connection, schema, and repositories
+- `models/` for typed entities
+- `themes/` for styling and design tokens
+- `scripts/` for build and demo-data helpers
 
-- `ui/`: ventanas, vistas y widgets reutilizables
-- `database/`: conexion, esquema y repositorios futuros
-- `models/`: entidades y estructuras tipadas
-- `services/`: logica de negocio y calculos
-- `themes/`: tokens visuales y estilos
-- `assets/`: iconos e imagenes
-- `docs/`: decisiones de arquitectura y producto
+More detail is available in [docs/architecture.md](docs/architecture.md).
 
-## Documentacion inicial
+## Run Locally
 
-- [Arquitectura MVP](C:/Users/jona/Desktop/aulatrack/docs/architecture.md)
-- [Esquema SQLite](C:/Users/jona/Desktop/aulatrack/database/schema.sql)
-
-## Requisitos
-
-- Python 3.11 o superior
-- Windows con PowerShell
-
-## Arranque rapido
-
-La forma mas simple de probar la app es ejecutar:
+The fastest way to start the app is:
 
 ```powershell
 .\run.ps1
 ```
 
-Ese script:
+That script:
 
-- crea `.venv` si no existe
-- instala dependencias desde `requirements.txt`
-- inicia la aplicacion
+- creates `.venv` if needed
+- installs dependencies from `requirements.txt`
+- launches the application
 
-## Build para Windows
+## Build for Windows
 
-Para generar una carpeta distribuible con `AulaTrack.exe`:
+To generate a distributable Windows folder:
 
 ```powershell
 .\build.ps1
 ```
 
-Ese script:
-
-- reutiliza `.venv`
-- instala `PyInstaller`
-- empaqueta la app en `dist/AulaTrack/`
-- incluye el esquema SQLite necesario para inicializar la base
-
-Despues del build, el ejecutable queda en:
+The build output is created in:
 
 ```text
 dist/AulaTrack/AulaTrack.exe
 ```
 
-En modo empaquetado, la app guarda sus datos y logs junto al ejecutable:
+In packaged mode, the app stores its local data and logs next to the executable:
 
 - `dist/AulaTrack/data/aulatrack.db`
 - `dist/AulaTrack/data/logs/aulatrack.log`
 
-## Arranque manual
+## Demo Data
 
-Si prefieres hacerlo paso a paso:
-
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-python main.py
-```
-
-Si en tu equipo no funciona `python`, intenta con:
+To populate the app with fictional data for testing or screenshots:
 
 ```powershell
-py -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-py main.py
+.\.venv\Scripts\python.exe scripts\seed_demo_data.py
 ```
 
-## Como revisar el MVP actual
+## Local Data
 
-1. Abre `Grupos` y crea uno o varios grupos.
-2. Selecciona un grupo y agrega alumnos en el panel derecho.
-3. Edita y elimina registros para validar el flujo CRUD.
-4. Vuelve a `Dashboard` para confirmar que los indicadores cambian.
-
-## Datos locales
-
-- La base SQLite se guarda en [data/aulatrack.db](C:/Users/jona/Desktop/aulatrack/data/aulatrack.db)
-- Si quieres reiniciar una prueba desde cero, cierra la app y elimina ese archivo
+- Main local database: `data/aulatrack.db`
+- Local logs: `data/logs/aulatrack.log`
 
 ## License
 
 This repository is shared for portfolio and demonstration purposes only.
 
-All rights reserved. See [LICENSE](C:/Users/jona/Desktop/aulatrack/LICENSE).
+All rights reserved. See [LICENSE](LICENSE).
