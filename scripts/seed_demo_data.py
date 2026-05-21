@@ -151,7 +151,7 @@ def main() -> None:
         exam_category = category_service.create(
             group_id=group.id,
             name="Examen",
-            weight_percent=40,
+            weight_percent=30,
             period_number=1,
             category_mode="normal",
             deduction_base_score=100,
@@ -161,7 +161,7 @@ def main() -> None:
         tasks_category = category_service.create(
             group_id=group.id,
             name="Tareas",
-            weight_percent=30,
+            weight_percent=25,
             period_number=1,
             category_mode="normal",
             deduction_base_score=100,
@@ -171,12 +171,22 @@ def main() -> None:
         participation_category = category_service.create(
             group_id=group.id,
             name="Participacion",
-            weight_percent=20,
+            weight_percent=15,
             period_number=1,
             category_mode="normal",
             deduction_base_score=100,
             is_active=True,
             sort_order=3,
+        )
+        project_category = category_service.create(
+            group_id=group.id,
+            name="Proyecto",
+            weight_percent=20,
+            period_number=1,
+            category_mode="normal",
+            deduction_base_score=100,
+            is_active=True,
+            sort_order=4,
         )
         discipline_category = category_service.create(
             group_id=group.id,
@@ -186,17 +196,7 @@ def main() -> None:
             category_mode="deduction",
             deduction_base_score=10,
             is_active=True,
-            sort_order=4,
-        )
-        project_category = category_service.create(
-            group_id=group.id,
-            name="Proyecto",
-            weight_percent=100,
-            period_number=2,
-            category_mode="normal",
-            deduction_base_score=100,
-            is_active=True,
-            sort_order=1,
+            sort_order=5,
         )
 
         activities = [

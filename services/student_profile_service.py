@@ -50,6 +50,8 @@ class StudentProfileService:
             student_deductions.setdefault(item.category_id, []).append(item)
 
         category_rows: list[dict] = []
+        graded_activities: list[dict] = []
+        pending_activities: list[dict] = []
         unresolved_count = 0
         missing_count = 0
 
@@ -64,12 +66,32 @@ class StudentProfileService:
                 if grade and grade.score is not None:
                     scores.append(grade.score)
                     max_scores.append(activity.max_score)
+                    graded_activities.append(
+                        {
+                            "activity_name": activity.name,
+                            "category_name": category.name,
+                            "score": round(grade.score, 1),
+                            "max_score": round(activity.max_score, 1),
+                            "comment": grade.comment.strip(),
+                            "due_date": activity.due_date or "",
+                        }
+                    )
                     continue
                 if category.category_mode == "deduction":
                     continue
                 unresolved_count += 1
-                if grade and grade.status == "missing":
+                status = grade.status if grade else "pending"
+                if status == "missing":
                     missing_count += 1
+                pending_activities.append(
+                    {
+                        "activity_name": activity.name,
+                        "category_name": category.name,
+                        "status": status,
+                        "due_date": activity.due_date or "",
+                        "max_score": round(activity.max_score, 1),
+                    }
+                )
 
             if category.category_mode == "deduction":
                 deduction_entries = student_deductions.get(category.id, [])
@@ -139,6 +161,8 @@ class StudentProfileService:
                 "unresolved_count": unresolved_count,
                 "risk": risk,
                 "categories": category_rows,
+                "graded_activities": graded_activities,
+                "pending_activities": pending_activities,
             },
             "attendance_summary": {
                 "total_sessions": total_sessions,

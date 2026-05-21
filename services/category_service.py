@@ -24,6 +24,7 @@ class CategoryService:
         is_custom: bool = True,
     ) -> EvaluationCategory:
         self._validate(name, weight_percent, period_number, category_mode, deduction_base_score)
+        self._validate_total_points(group_id, period_number, weight_percent, is_active)
         return self.repository.create(
             EvaluationCategory(
                 id=None,
@@ -53,6 +54,7 @@ class CategoryService:
         is_custom: bool = True,
     ) -> None:
         self._validate(name, weight_percent, period_number, category_mode, deduction_base_score)
+        self._validate_total_points(group_id, period_number, weight_percent, is_active, category_id)
         self.repository.update(
             EvaluationCategory(
                 id=category_id,
@@ -89,3 +91,29 @@ class CategoryService:
             raise ValueError("El tipo de criterio es invalido.")
         if category_mode == "deduction" and deduction_base_score <= 0:
             raise ValueError("Un criterio por deduccion debe tener puntos mayores que cero.")
+
+    def _validate_total_points(
+        self,
+        group_id: int,
+        period_number: int,
+        weight_percent: float,
+        is_active: bool,
+        current_category_id: int | None = None,
+    ) -> None:
+        if not is_active:
+            return
+
+        active_categories = self.list_by_group(group_id, period_number)
+        active_total = 0.0
+        for category in active_categories:
+            if not category.is_active:
+                continue
+            if current_category_id is not None and category.id == current_category_id:
+                continue
+            active_total += category.weight_percent
+
+        next_total = round(active_total + weight_percent, 2)
+        if next_total > 100.0:
+            raise ValueError(
+                f"La suma de criterios activos no puede superar 100 puntos. Total actual: {next_total:.1f}."
+            )

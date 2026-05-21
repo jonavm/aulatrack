@@ -12,6 +12,7 @@ from services.category_service import CategoryService
 from services.database_service import DatabaseService
 from services.gradebook_service import GradebookService
 from services.group_service import GroupService
+from services.student_profile_service import StudentProfileService
 from services.student_import_service import ImportPreview, ParsedStudent
 from services.student_service import StudentService
 
@@ -38,6 +39,7 @@ class CoreFlowsTestCase(unittest.TestCase):
         self.category_service = CategoryService()
         self.activity_service = ActivityService()
         self.gradebook_service = GradebookService()
+        self.student_profile_service = StudentProfileService()
         self.database_service = DatabaseService()
 
     def tearDown(self) -> None:
@@ -176,6 +178,117 @@ class CoreFlowsTestCase(unittest.TestCase):
         self.assertEqual(1.5, snapshot["adjustments"][0].points)
         self.assertEqual(1, len(snapshot["category_deductions"]))
         self.assertEqual(2.0, snapshot["category_deductions"][0].points)
+
+    def test_student_profile_includes_graded_and_pending_activity_lists(self) -> None:
+        group = self._create_group()
+        student = self.student_service.create_student(
+            group.id,
+            first_name="Lucia",
+            last_name="Herrera Solis",
+            student_code="A-06",
+            is_active=True,
+            notes="",
+        )
+        category = self.category_service.create(
+            group_id=group.id,
+            name="Tareas",
+            weight_percent=100,
+            period_number=1,
+            category_mode="normal",
+            deduction_base_score=100,
+            is_active=True,
+            sort_order=1,
+        )
+        graded_activity = self.activity_service.create(
+            category_id=category.id,
+            name="Tarea 1",
+            max_score=10,
+            due_date="2026-05-21",
+            applies_to_risk=True,
+            sort_order=1,
+        )
+        pending_activity = self.activity_service.create(
+            category_id=category.id,
+            name="Tarea 2",
+            max_score=10,
+            due_date="2026-05-22",
+            applies_to_risk=True,
+            sort_order=2,
+        )
+
+        self.gradebook_service.save_entry(graded_activity.id, student.id, 9.0, "graded", "")
+        self.gradebook_service.save_entry(pending_activity.id, student.id, None, "pending", "")
+
+        profile = self.student_profile_service.build_profile(group.id, student.id)
+
+        self.assertIsNotNone(profile)
+        grade_summary = profile["grade_summary"]
+        self.assertEqual(1, len(grade_summary["graded_activities"]))
+        self.assertEqual("Tarea 1", grade_summary["graded_activities"][0]["activity_name"])
+        self.assertEqual(1, len(grade_summary["pending_activities"]))
+        self.assertEqual("Tarea 2", grade_summary["pending_activities"][0]["activity_name"])
+        self.assertEqual("pending", grade_summary["pending_activities"][0]["status"])
+
+    def test_category_creation_rejects_active_weights_above_100(self) -> None:
+        group = self._create_group()
+        self.category_service.create(
+            group_id=group.id,
+            name="Examen",
+            weight_percent=70,
+            period_number=1,
+            category_mode="normal",
+            deduction_base_score=100,
+            is_active=True,
+            sort_order=1,
+        )
+
+        with self.assertRaisesRegex(ValueError, "no puede superar 100"):
+            self.category_service.create(
+                group_id=group.id,
+                name="Proyecto",
+                weight_percent=40,
+                period_number=1,
+                category_mode="normal",
+                deduction_base_score=100,
+                is_active=True,
+                sort_order=2,
+            )
+
+    def test_category_update_rejects_active_weights_above_100(self) -> None:
+        group = self._create_group()
+        category_a = self.category_service.create(
+            group_id=group.id,
+            name="Examen",
+            weight_percent=60,
+            period_number=1,
+            category_mode="normal",
+            deduction_base_score=100,
+            is_active=True,
+            sort_order=1,
+        )
+        category_b = self.category_service.create(
+            group_id=group.id,
+            name="Proyecto",
+            weight_percent=40,
+            period_number=1,
+            category_mode="normal",
+            deduction_base_score=100,
+            is_active=True,
+            sort_order=2,
+        )
+
+        with self.assertRaisesRegex(ValueError, "no puede superar 100"):
+            self.category_service.update(
+                category_b.id,
+                group.id,
+                name="Proyecto",
+                weight_percent=50,
+                period_number=1,
+                category_mode="normal",
+                deduction_base_score=100,
+                is_active=True,
+                sort_order=2,
+            )
 
     def test_backup_and_restore_recovers_deleted_data(self) -> None:
         group = self._create_group()
