@@ -258,6 +258,7 @@ class GradebookView(QWidget):
         self.categories_table.selectionModel().selectionChanged.connect(self._update_actions)
         self.categories_table.selectionModel().selectionChanged.connect(self._refresh_activity_panel)
         self.activities_table.selectionModel().selectionChanged.connect(self._update_actions)
+        self.student_table.selectionModel().selectionChanged.connect(self._update_actions)
         self._load_groups()
 
     def _current_category_is_deduction(self) -> bool:
@@ -305,6 +306,7 @@ class GradebookView(QWidget):
                 categories=[],
                 grades=[],
                 adjustments=[],
+                adjustment_entries=[],
                 category_deductions=[],
                 passing_grade=60.0,
                 save_callback=self._save_score,
@@ -316,10 +318,8 @@ class GradebookView(QWidget):
             self.table_caption.setText("Selecciona un grupo para preparar la captura.")
             self.save_status_label.setText("Sin grupo seleccionado.")
             self.activity_panel_title.setText("Actividades o descuentos")
-            self.selected_category_label.setText("Selecciona un criterio")
-            self.selected_category_label.setObjectName("BadgeWarning")
-            self.selected_category_label.style().unpolish(self.selected_category_label)
-            self.selected_category_label.style().polish(self.selected_category_label)
+            self.selected_category_label.clear()
+            self.selected_category_label.hide()
             self.activity_helper.setText("Aqui solo defines la estructura. La captura real siempre se hace por alumno en el libro.")
             self.page_title.setText("Calificaciones")
             self.header_context.setText("Selecciona un grupo y un periodo para empezar.")
@@ -338,6 +338,7 @@ class GradebookView(QWidget):
         students = snapshot["students"]
         grades = snapshot["grades"]
         adjustments = snapshot["adjustments"]
+        adjustment_entries = snapshot["adjustment_entries"]
         category_deductions = snapshot["category_deductions"]
         self._all_categories = categories
         self._all_activities = activities
@@ -349,6 +350,7 @@ class GradebookView(QWidget):
             categories=categories,
             grades=grades,
             adjustments=adjustments,
+            adjustment_entries=adjustment_entries,
             category_deductions=category_deductions,
             passing_grade=group.passing_grade,
             save_callback=self._save_score,
@@ -373,7 +375,7 @@ class GradebookView(QWidget):
 
         self.category_summary.setText("Configuracion valida." if weights_valid else "La suma activa debe llegar a 100 puntos.")
         self.table_caption.setText(
-            f"Captura por alumno en el libro del Periodo {period_number}. Si un criterio es por deduccion, haz clic en su celda y registra el descuento del alumno."
+            f"Captura por alumno en el libro del Periodo {period_number}. Tambien puedes asignar puntos extra aparte de los criterios usando el boton o la columna Extra."
             if students and has_capture_structure
             else "Faltan alumnos o estructura para comenzar la captura."
         )
@@ -391,10 +393,8 @@ class GradebookView(QWidget):
             self.activity_model.set_items([])
             self.activity_model.set_deduction_mode(False)
             self.activity_summary.setText("Selecciona un criterio para ver su estructura.")
-            self.selected_category_label.setText("Selecciona un criterio")
-            self.selected_category_label.setObjectName("BadgeWarning")
-            self.selected_category_label.style().unpolish(self.selected_category_label)
-            self.selected_category_label.style().polish(self.selected_category_label)
+            self.selected_category_label.clear()
+            self.selected_category_label.hide()
             self.activity_helper.setText("Aqui solo defines la estructura. La captura real siempre se hace por alumno en el libro.")
             self.activities_table.resizeColumnsToContents()
             self._update_actions()
@@ -417,6 +417,7 @@ class GradebookView(QWidget):
             self.selected_category_label.setText(f"Criterio activo: {category.name}")
             self.selected_category_label.setObjectName("BadgeSuccess")
             self.activity_helper.setText("Las actividades de este criterio se promedian de forma normal.")
+        self.selected_category_label.show()
         self.selected_category_label.style().unpolish(self.selected_category_label)
         self.selected_category_label.style().polish(self.selected_category_label)
         if not filtered:
@@ -571,15 +572,11 @@ class GradebookView(QWidget):
         self.export_book_button.setEnabled(has_group and self.student_model.rowCount() > 0)
         if not has_group:
             self.new_category_button.setText("Crea grupo primero")
-            self.add_activity_button.setText("Sin criterio")
         else:
             self.new_category_button.setText("Nuevo criterio")
-        if not has_category:
-            self.add_activity_button.setText("Selecciona criterio")
-        elif deduction_category:
+        self.add_activity_button.setText("Nueva actividad")
+        if deduction_category:
             self.add_activity_button.setText("No usa actividades")
-        else:
-            self.add_activity_button.setText("Nueva actividad")
 
     def _open_book_fullscreen(self) -> None:
         dialog = TablePreviewDialog(
@@ -668,14 +665,9 @@ class GradebookView(QWidget):
                 else f"Calificacion {score:.1f} guardada automaticamente."
             )
 
-    def _save_adjustment(self, group_id: int, student_id: int, points: float) -> None:
-        self.gradebook_service.save_adjustment(group_id, student_id, points)
-        if points > 0:
-            self.save_status_label.setText(f"Puntos extra guardados: +{points:.2f}")
-        elif points < 0:
-            self.save_status_label.setText(f"Descuento guardado: {points:.2f}")
-        else:
-            self.save_status_label.setText("Ajuste reiniciado a 0.00")
+    def _save_adjustment(self, group_id: int, student_id: int, points: float, note: str = "") -> None:
+        self.gradebook_service.add_adjustment_entry(group_id, student_id, points, note)
+        self.save_status_label.setText(f"Puntos extra agregados: +{points:.2f}")
 
     def _add_category_deduction(self, category_id: int, student_id: int, points: float, note: str) -> None:
         self.gradebook_service.add_category_deduction(category_id, student_id, points, note)

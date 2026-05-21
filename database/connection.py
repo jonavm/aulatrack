@@ -112,7 +112,28 @@ def _run_migrations(connection: sqlite3.Connection) -> None:
         ON student_category_deduction_entries(category_id, student_id)
         """
     )
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS student_adjustment_entries (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            group_id INTEGER NOT NULL,
+            student_id INTEGER NOT NULL,
+            points REAL NOT NULL DEFAULT 0,
+            note TEXT,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE,
+            FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_student_adjustment_entries_group_student
+        ON student_adjustment_entries(group_id, student_id)
+        """
+    )
     _migrate_legacy_category_deductions(connection)
+    _migrate_legacy_adjustments(connection)
 
 
 def _migrate_legacy_category_deductions(connection: sqlite3.Connection) -> None:
@@ -134,5 +155,29 @@ def _migrate_legacy_category_deductions(connection: sqlite3.Connection) -> None:
         INSERT INTO student_category_deduction_entries (category_id, student_id, points, note, created_at)
         SELECT category_id, student_id, points, note, COALESCE(updated_at, CURRENT_TIMESTAMP)
         FROM student_category_deductions
+        """
+    )
+
+
+def _migrate_legacy_adjustments(connection: sqlite3.Connection) -> None:
+    tables = {
+        row["name"]
+        for row in connection.execute("SELECT name FROM sqlite_master WHERE type = 'table'").fetchall()
+    }
+    if "student_adjustments" not in tables or "student_adjustment_entries" not in tables:
+        return
+
+    existing_rows = connection.execute(
+        "SELECT COUNT(*) AS total FROM student_adjustment_entries"
+    ).fetchone()["total"]
+    if existing_rows:
+        return
+
+    connection.execute(
+        """
+        INSERT INTO student_adjustment_entries (group_id, student_id, points, note, created_at)
+        SELECT group_id, student_id, points, note, COALESCE(updated_at, CURRENT_TIMESTAMP)
+        FROM student_adjustments
+        WHERE points > 0
         """
     )

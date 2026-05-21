@@ -163,6 +163,16 @@ class StudentAdjustment:
 
 
 @dataclass(slots=True)
+class StudentAdjustmentEntry:
+    id: Optional[int]
+    group_id: int
+    student_id: int
+    points: float = 0.0
+    note: str = ""
+    created_at: str = ""
+
+
+@dataclass(slots=True)
 class StudentCategoryDeductionEntry:
     id: Optional[int]
     category_id: int

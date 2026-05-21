@@ -3,7 +3,15 @@ from __future__ import annotations
 from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt
 from PySide6.QtGui import QColor
 
-from models.entities import Activity, EvaluationCategory, GradeEntry, Student, StudentAdjustment, StudentCategoryDeductionEntry
+from models.entities import (
+    Activity,
+    EvaluationCategory,
+    GradeEntry,
+    Student,
+    StudentAdjustment,
+    StudentAdjustmentEntry,
+    StudentCategoryDeductionEntry,
+)
 from services.grade_service import GradeCalculator
 from services.gradebook_service import GradebookService
 from themes.theme import get_theme_tokens
@@ -13,6 +21,7 @@ class GradebookStudentTableModel(QAbstractTableModel):
     USER_ROLE_MAX_SCORE = 1001
     USER_ROLE_STATUS = 1002
     USER_ROLE_DEDUCTION_TARGET = 1003
+    USER_ROLE_ADJUSTMENT_TARGET = 1004
 
     def __init__(self) -> None:
         super().__init__()
@@ -23,6 +32,7 @@ class GradebookStudentTableModel(QAbstractTableModel):
         self._active_categories: list[EvaluationCategory] = []
         self._grade_lookup: dict[tuple[int, int], GradeEntry] = {}
         self._adjustment_lookup: dict[int, StudentAdjustment] = {}
+        self._adjustment_entry_lookup: dict[int, list[StudentAdjustmentEntry]] = {}
         self._category_deduction_lookup: dict[tuple[int, int], list[StudentCategoryDeductionEntry]] = {}
         self._group_id: int | None = None
         self._passing_grade = 60.0
@@ -39,6 +49,7 @@ class GradebookStudentTableModel(QAbstractTableModel):
         categories: list[EvaluationCategory],
         grades: list[GradeEntry],
         adjustments: list[StudentAdjustment],
+        adjustment_entries: list[StudentAdjustmentEntry],
         category_deductions: list[StudentCategoryDeductionEntry],
         passing_grade: float,
         save_callback,
@@ -58,6 +69,10 @@ class GradebookStudentTableModel(QAbstractTableModel):
         ]
         self._grade_lookup = {(item.student_id, item.activity_id): item for item in grades}
         self._adjustment_lookup = {item.student_id: item for item in adjustments}
+        adjustment_entry_lookup: dict[int, list[StudentAdjustmentEntry]] = {}
+        for item in adjustment_entries:
+            adjustment_entry_lookup.setdefault(item.student_id, []).append(item)
+        self._adjustment_entry_lookup = adjustment_entry_lookup
         deduction_lookup: dict[tuple[int, int], list[StudentCategoryDeductionEntry]] = {}
         for item in category_deductions:
             deduction_lookup.setdefault((item.student_id, item.category_id), []).append(item)
@@ -170,13 +185,31 @@ class GradebookStudentTableModel(QAbstractTableModel):
                     ],
                 }
 
+        if role == self.USER_ROLE_ADJUSTMENT_TARGET and index.column() == adjustment_col:
+            adjustment = self._adjustment_lookup.get(student.id)
+            return {
+                "student_id": student.id,
+                "student_name": student.roster_name,
+                "points": adjustment.points if adjustment else 0.0,
+                "entries": [
+                    {
+                        "id": item.id,
+                        "points": item.points,
+                        "note": item.note,
+                        "created_at": item.created_at,
+                    }
+                    for item in self._adjustment_entry_lookup.get(student.id, [])
+                ],
+            }
+
         if role == Qt.ToolTipRole and index.column() == risk_col:
             metrics = self._student_metrics(student)
             risk = metrics["risk"]
             return "\n".join(risk["reasons"]) if risk["reasons"] else "Sin alertas"
 
         if role == Qt.ToolTipRole and index.column() == adjustment_col:
-            return "Puntos extra o descuento manual aplicados al resultado del periodo."
+            entry_count = len(self._adjustment_entry_lookup.get(student.id, []))
+            return f"Puntos extra acumulados aparte de los criterios. Registros capturados: {entry_count}."
 
         if role == Qt.BackgroundRole and index.column() == risk_col:
             metrics = self._student_metrics(student)
@@ -294,7 +327,7 @@ class GradebookStudentTableModel(QAbstractTableModel):
                 if section == average_col:
                     return "Resultado del periodo antes de ajustes manuales."
                 if section == adjustment_col:
-                    return "Puntos extra o descuentos manuales sobre el resultado del periodo."
+                    return "Puntos extra aplicados aparte de los criterios del periodo."
                 if section == adjusted_average_col:
                     return "Resultado del periodo despues de ajustes manuales."
                 if section == average_col + 3:
@@ -317,7 +350,7 @@ class GradebookStudentTableModel(QAbstractTableModel):
             if section == average_col:
                 return "Periodo"
             if section == adjustment_col:
-                return "Ajuste"
+                return "Extra"
             if section == adjusted_average_col:
                 return "Periodo ajust."
             if section == average_col + 3:
@@ -337,8 +370,6 @@ class GradebookStudentTableModel(QAbstractTableModel):
             category = self._active_categories[index.column() - category_avg_start]
             if category.category_mode == "deduction":
                 flags |= Qt.ItemIsEditable
-        if index.column() == average_col + 1:
-            flags |= Qt.ItemIsEditable
         return flags
 
     def _activity_category(self, activity: Activity) -> EvaluationCategory | None:
@@ -346,6 +377,20 @@ class GradebookStudentTableModel(QAbstractTableModel):
             if category.id == activity.category_id:
                 return category
         return None
+
+    def get_student(self, row: int) -> Student | None:
+        if row < 0 or row >= len(self._students):
+            return None
+        return self._students[row]
+
+    def adjustment_column(self) -> int:
+        category_avg_start = 1 + len(self._visible_activities)
+        average_col = category_avg_start + len(self._active_categories)
+        return average_col + 1
+
+    def current_adjustment_points(self, student_id: int) -> float:
+        adjustment = self._adjustment_lookup.get(student_id)
+        return adjustment.points if adjustment else 0.0
 
     def _category_deduction_entries(self, student_id: int, category_id: int) -> list[StudentCategoryDeductionEntry]:
         return list(self._category_deduction_lookup.get((student_id, category_id), []))
@@ -491,17 +536,36 @@ class GradebookStudentTableModel(QAbstractTableModel):
         if self._group_id is None:
             return False
         student = self._students[index.row()]
+        if not isinstance(value, dict):
+            return False
+        note = str(value.get("note", "") or "").strip()
+        raw_value = value.get("points", 0)
         try:
-            points = round(float(value or 0), 2)
+            points = round(float(raw_value or 0), 2)
         except (TypeError, ValueError):
             return False
-        self._save_adjustment_callback(self._group_id, student.id, points)
+        if points <= 0:
+            return False
+        self._save_adjustment_callback(self._group_id, student.id, points, note)
+        current_adjustment = self._adjustment_lookup.get(student.id)
+        updated_points = round((current_adjustment.points if current_adjustment else 0.0) + points, 2)
         self._adjustment_lookup[student.id] = StudentAdjustment(
             id=None,
             group_id=self._group_id,
             student_id=student.id,
-            points=points,
-            note="",
+            points=updated_points,
+            note=note,
+        )
+        self._adjustment_entry_lookup.setdefault(student.id, []).insert(
+            0,
+            StudentAdjustmentEntry(
+                id=None,
+                group_id=self._group_id,
+                student_id=student.id,
+                points=points,
+                note=note,
+                created_at="",
+            ),
         )
         self.dataChanged.emit(index, index, [Qt.DisplayRole, Qt.EditRole])
         row = index.row()

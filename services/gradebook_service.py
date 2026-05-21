@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from services.activity_service import ActivityService
 from services.adjustment_service import AdjustmentService
+from services.adjustment_entry_service import AdjustmentEntryService
 from services.category_service import CategoryService
 from services.grade_entry_service import GradeEntryService
 from services.group_service import GroupService
@@ -18,6 +19,7 @@ class GradebookService:
         self.activity_service = ActivityService()
         self.grade_entry_service = GradeEntryService()
         self.adjustment_service = AdjustmentService()
+        self.adjustment_entry_service = AdjustmentEntryService()
         self.student_category_deduction_service = StudentCategoryDeductionService()
 
     def build_snapshot(self, group_id: int, period_number: int = 1) -> dict:
@@ -26,6 +28,7 @@ class GradebookService:
         activities = self.activity_service.list_by_group(group_id, period_number)
         grades = self.grade_entry_service.list_by_group(group_id, period_number)
         adjustments = self.adjustment_service.list_by_group(group_id)
+        adjustment_entries = self.adjustment_entry_service.list_by_group(group_id)
         category_deductions = self.student_category_deduction_service.list_by_group(group_id, period_number)
         return {
             "students": students,
@@ -33,6 +36,7 @@ class GradebookService:
             "activities": activities,
             "grades": grades,
             "adjustments": adjustments,
+            "adjustment_entries": adjustment_entries,
             "category_deductions": category_deductions,
         }
 
@@ -46,8 +50,11 @@ class GradebookService:
     ) -> None:
         self.grade_entry_service.save_entry(activity_id, student_id, score, status, comment)
 
-    def save_adjustment(self, group_id: int, student_id: int, points: float) -> None:
-        self.adjustment_service.save_adjustment(group_id, student_id, points)
+    def save_adjustment(self, group_id: int, student_id: int, points: float, note: str = "") -> None:
+        self.adjustment_service.save_adjustment(group_id, student_id, points, note)
+
+    def add_adjustment_entry(self, group_id: int, student_id: int, points: float, note: str = "") -> None:
+        self.adjustment_entry_service.add_entry(group_id, student_id, points, note)
 
     def add_category_deduction(self, category_id: int, student_id: int, points: float, note: str) -> None:
         self.student_category_deduction_service.add_entry(category_id, student_id, points, note)

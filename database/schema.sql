@@ -111,6 +111,17 @@ CREATE TABLE IF NOT EXISTS student_adjustments (
     FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS student_adjustment_entries (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    group_id INTEGER NOT NULL,
+    student_id INTEGER NOT NULL,
+    points REAL NOT NULL DEFAULT 0,
+    note TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE,
+    FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS student_category_deduction_entries (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     category_id INTEGER NOT NULL,
@@ -156,6 +167,9 @@ CREATE INDEX IF NOT EXISTS idx_attendance_records_session_student
 
 CREATE INDEX IF NOT EXISTS idx_student_adjustments_group_student
     ON student_adjustments(group_id, student_id);
+
+CREATE INDEX IF NOT EXISTS idx_student_adjustment_entries_group_student
+    ON student_adjustment_entries(group_id, student_id);
 
 CREATE INDEX IF NOT EXISTS idx_student_category_deduction_entries_category_student
     ON student_category_deduction_entries(category_id, student_id);

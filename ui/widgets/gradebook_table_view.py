@@ -5,6 +5,7 @@ from PySide6.QtGui import QKeySequence
 from PySide6.QtCore import QModelIndex
 from PySide6.QtWidgets import QApplication, QMessageBox, QTableView
 
+from ui.widgets.adjustment_dialog import AdjustmentDialog
 from ui.widgets.deduction_entry_dialog import DeductionEntryDialog
 
 
@@ -23,6 +24,18 @@ class GradebookTableView(QTableView):
         role_name = getattr(model, "USER_ROLE_DEDUCTION_TARGET", -1)
         target = index.data(role_name)
         if not target:
+            adjustment_role = getattr(model, "USER_ROLE_ADJUSTMENT_TARGET", -1)
+            adjustment_target = index.data(adjustment_role)
+            if not adjustment_target:
+                return
+            dialog = AdjustmentDialog(
+                student_name=adjustment_target["student_name"],
+                current_points=adjustment_target["points"],
+                entries=adjustment_target["entries"],
+                parent=self,
+            )
+            if dialog.exec() == AdjustmentDialog.Accepted:
+                model.setData(index, dialog.get_payload(), Qt.EditRole)
             return
         dialog = DeductionEntryDialog(
             student_name=target["student_name"],

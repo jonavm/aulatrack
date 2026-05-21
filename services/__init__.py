@@ -1,5 +1,6 @@
 from .activity_service import ActivityService
 from .adjustment_service import AdjustmentService
+from .adjustment_entry_service import AdjustmentEntryService
 from .attendance_service import AttendanceService
 from .category_service import CategoryService
 from .database_service import DatabaseService
@@ -16,6 +17,7 @@ from .student_service import StudentService
 __all__ = [
     "ActivityService",
     "AdjustmentService",
+    "AdjustmentEntryService",
     "AttendanceService",
     "CategoryService",
     "DatabaseService",

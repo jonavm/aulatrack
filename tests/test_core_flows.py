@@ -176,6 +176,8 @@ class CoreFlowsTestCase(unittest.TestCase):
         self.assertEqual(95.0, snapshot["grades"][0].score)
         self.assertEqual(1, len(snapshot["adjustments"]))
         self.assertEqual(1.5, snapshot["adjustments"][0].points)
+        self.assertEqual(1, len(snapshot["adjustment_entries"]))
+        self.assertEqual(1.5, snapshot["adjustment_entries"][0].points)
         self.assertEqual(1, len(snapshot["category_deductions"]))
         self.assertEqual(2.0, snapshot["category_deductions"][0].points)
 
